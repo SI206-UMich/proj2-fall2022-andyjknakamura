@@ -33,7 +33,7 @@ def get_listings_from_search_results(html_file):
     fhand = open(html_file, 'r')
     file = fhand.read()
     soup = BeautifulSoup(file, 'html.parser')
-    titles = soup.find_all('span', class_="t6mzqp7 dir dir-ltr")
+    titles = soup.find_all('div', class_="t1jojoys dir dir-ltr")
     for item in titles:
         title.append(item.text)
     ids = soup.find_all('div', class_="t1jojoys dir dir-ltr")
@@ -136,7 +136,11 @@ def write_csv(data, filename):
 
     This function should not return anything.
     """
-    pass
+    data.sort(key = lambda t: t[1])
+    fout = open(filename, 'w')
+    fout.write('Listing Title, Cost, Listing ID, Policy Number, Place Type, Number of Bedrooms \n')
+    for tup in data:
+        fout.write(str(tup).strip('()') + '\n')
 
 
 def check_policy_numbers(data):
@@ -283,8 +287,8 @@ class TestCases(unittest.TestCase):
     '''
 
 if __name__ == '__main__':
-    #database = get_detailed_listing_database("html_files/mission_district_search_results.html")
-    print(get_detailed_listing_database("html_files/mission_district_search_results.html"))
-    #write_csv(database, "airbnb_dataset.csv")
+    database = get_detailed_listing_database("html_files/mission_district_search_results.html")
+    #print(get_detailed_listing_database("html_files/mission_district_search_results.html"))
+    write_csv(database, "airbnb_dataset.csv")
     #check_policy_numbers(database)
     #unittest.main(verbosity=2)
