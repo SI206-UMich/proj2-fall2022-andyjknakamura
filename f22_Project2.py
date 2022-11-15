@@ -78,17 +78,27 @@ def get_listing_information(listing_id):
     file = fhand.read()
     soup = BeautifulSoup(file, 'html.parser')
     policy_tag = soup.find('li', class_="f19phm7j dir dir-ltr")
-    policy_num = policy_tag.find('span')
+    policy_num = policy_tag.find('span').text
+    if re.search('[Pp]ending', policy_num):
+        policy_num = "Pending"
+    if re.search('not needed', policy_num):
+        policy_num = "Exempt"
     place_tag = soup.find('meta', property="og:description")
     place_desc = place_tag.get('content', None)
-    place_type = place_desc.split()
+    place_desc = place_desc.split()
+    if re.search('Private', place_desc[0]):
+        place_type = "Private Room"
+    elif re.search('Shared', place_desc[0]):
+        place_type = "Shared Room"
+    else:
+        place_type = "Entire Room"
     bedrooms_tag = soup.find_all('li', class_="l7n4lsf dir dir-ltr")[1]
     bedrooms_tag = bedrooms_tag.find_all('span')[2].text.split()
     if bedrooms_tag[0] == 'Studio':
         bedrooms_tag[0] = 1
     bedrooms = int(bedrooms_tag[0])
 
-    return (policy_num.text, place_type[0] + ' Room', bedrooms)
+    return (policy_num, place_type, bedrooms)
 
 
 def get_detailed_listing_database(html_file):
@@ -138,9 +148,10 @@ def write_csv(data, filename):
     """
     data.sort(key = lambda t: t[1])
     fout = open(filename, 'w')
-    fout.write('Listing Title, Cost, Listing ID, Policy Number, Place Type, Number of Bedrooms \n')
+    fout.write('Listing Title,Cost,Listing ID,Policy Number,Place Type,Number of Bedrooms\n')
     for tup in data:
-        fout.write(str(tup).strip('()') + '\n')
+        joined_tup = ','.join(map(str, tup))
+        fout.write((joined_tup) + '\n')
 
 
 def check_policy_numbers(data):
@@ -162,7 +173,15 @@ def check_policy_numbers(data):
     ]
 
     """
-    pass
+    invalid = []
+    for tup in data:
+        if re.search('^20[0-9][0-9]\-00[0-9]{4}STR$', tup[2]):
+            continue
+        if re.search('^STR\-000[0-9]{4}$', tup[2]):
+            continue
+        else:
+            invalid.append(tup[2])
+    return invalid
 
 
 def extra_credit(listing_id):
@@ -196,9 +215,9 @@ class TestCases(unittest.TestCase):
         for item in listings:
             self.assertEqual(type(item), tuple)
         # check that the first title, cost, and listing id tuple is correct (open the search results html and find it)
-        self.assertEqual(listings[0], ('Super Clean Artist Loft above Sculpture Studio', 210, '1944564'))
+        self.assertEqual(listings[0], ('Loft in Mission District', 210, '1944564'))
         # check that the last title is correct (open the search results html and find it)
-        self.assertEqual(listings[-1], ('Hill Street Home, Sanctuary in Heart of the City', 238, '32871760'))
+        self.assertEqual(listings[-1], ('Guest suite in Mission District', 238, '32871760'))
 
     
     def test_get_listing_information(self):
@@ -228,7 +247,6 @@ class TestCases(unittest.TestCase):
         # check that the third listing has one bedroom
         self.assertEqual(listing_informations[2][2], 1)
 
-    '''
     def test_get_detailed_listing_database(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
         # and save it to a variable
@@ -239,14 +257,13 @@ class TestCases(unittest.TestCase):
             # assert each item in the list of listings is a tuple
             self.assertEqual(type(item), tuple)
             # check that each tuple has a length of 6
-
+            self.assertEqual(len(item), 6)
         # check that the first tuple is made up of the following:
         # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
-
+        self.assertEqual(detailed_database[0], ('Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1))
         # check that the last tuple is made up of the following:
         # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
-
-        pass
+        self.assertEqual(detailed_database[-1], ('Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1))
 
     def test_write_csv(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -263,12 +280,11 @@ class TestCases(unittest.TestCase):
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
         # check that the header row is correct
-
+        self.assertEqual(csv_lines[0], 'Listing Title, Cost, Listing ID, Policy Number, Place Type, Number of Bedrooms')
         # check that the next row is Private room in Mission District,82,51027324,Pending,Private Room,1
-
+        self.assertEqual(csv_lines[1], 'Private room in Mission District,82,51027324,Pending,Private Room,1')
         # check that the last row is Apartment in Mission District,399,28668414,Pending,Entire Room,2
-
-        pass
+        self.assertEqual(csv_lines[-1], 'Apartment in Mission District,399,28668414,Pending,Entire Room,2')
 
     def test_check_policy_numbers(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -279,16 +295,15 @@ class TestCases(unittest.TestCase):
         # check that the return value is a list
         self.assertEqual(type(invalid_listings), list)
         # check that there is exactly one element in the string
-
+        self.assertEqual(len(invalid_listings), 1)
         # check that the element in the list is a string
-
+        self.assertEqual(type(invalid_listings[0]), str)
         # check that the first element in the list is '16204265'
-        pass
-    '''
+        self.assertEqual(invalid_listings[0], 16204265)
 
 if __name__ == '__main__':
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
     #print(get_detailed_listing_database("html_files/mission_district_search_results.html"))
     write_csv(database, "airbnb_dataset.csv")
     #check_policy_numbers(database)
-    #unittest.main(verbosity=2)
+    unittest.main(verbosity=2)
