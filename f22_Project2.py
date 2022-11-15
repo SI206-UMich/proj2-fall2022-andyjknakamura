@@ -148,10 +148,11 @@ def write_csv(data, filename):
     """
     data.sort(key = lambda t: t[1])
     fout = open(filename, 'w')
-    fout.write('Listing Title,Cost,Listing ID,Policy Number,Place Type,Number of Bedrooms\n')
+    fout.write('Listing Title,Cost,Listing ID,Policy Number,Place Type,Number of Bedrooms' + '\n')
     for tup in data:
         joined_tup = ','.join(map(str, tup))
         fout.write((joined_tup) + '\n')
+    fout.close()
 
 
 def check_policy_numbers(data):
@@ -175,9 +176,11 @@ def check_policy_numbers(data):
     """
     invalid = []
     for tup in data:
-        if re.search('^20[0-9][0-9]\-00[0-9]{4}STR$', tup[2]):
+        if tup[3] == 'Exempt' or tup[3] == 'Pending':
             continue
-        if re.search('^STR\-000[0-9]{4}$', tup[2]):
+        if re.search('^20[0-9][0-9]\-00[0-9]{4}STR$', tup[3]):
+            continue
+        if re.search('^STR\-000[0-9]{4}$', tup[3]):
             continue
         else:
             invalid.append(tup[2])
@@ -280,11 +283,11 @@ class TestCases(unittest.TestCase):
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
         # check that the header row is correct
-        self.assertEqual(csv_lines[0], 'Listing Title, Cost, Listing ID, Policy Number, Place Type, Number of Bedrooms')
+        self.assertEqual(csv_lines[0], ['Listing Title','Cost','Listing ID','Policy Number','Place Type','Number of Bedrooms'])
         # check that the next row is Private room in Mission District,82,51027324,Pending,Private Room,1
-        self.assertEqual(csv_lines[1], 'Private room in Mission District,82,51027324,Pending,Private Room,1')
+        self.assertEqual(csv_lines[1], ['Private room in Mission District','82','51027324','Pending','Private Room','1'])
         # check that the last row is Apartment in Mission District,399,28668414,Pending,Entire Room,2
-        self.assertEqual(csv_lines[-1], 'Apartment in Mission District,399,28668414,Pending,Entire Room,2')
+        self.assertEqual(csv_lines[-1], ['Apartment in Mission District','399','28668414','Pending','Entire Room','2'])
 
     def test_check_policy_numbers(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -299,11 +302,10 @@ class TestCases(unittest.TestCase):
         # check that the element in the list is a string
         self.assertEqual(type(invalid_listings[0]), str)
         # check that the first element in the list is '16204265'
-        self.assertEqual(invalid_listings[0], 16204265)
+        self.assertEqual(invalid_listings[0], '16204265')
 
 if __name__ == '__main__':
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
-    #print(get_detailed_listing_database("html_files/mission_district_search_results.html"))
     write_csv(database, "airbnb_dataset.csv")
-    #check_policy_numbers(database)
+    check_policy_numbers(database)
     unittest.main(verbosity=2)
