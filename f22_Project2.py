@@ -74,7 +74,21 @@ def get_listing_information(listing_id):
         number of bedrooms
     )
     """
-    pass
+    fhand = open('html_files/listing_' + listing_id + '.html', encoding="utf8")
+    file = fhand.read()
+    soup = BeautifulSoup(file, 'html.parser')
+    policy_tag = soup.find('li', class_="f19phm7j dir dir-ltr")
+    policy_num = policy_tag.find('span')
+    place_tag = soup.find('meta', property="og:description")
+    place_desc = place_tag.get('content', None)
+    place_type = place_desc.split()
+    bedrooms_tag = soup.find_all('li', class_="l7n4lsf dir dir-ltr")[1]
+    bedrooms_tag = bedrooms_tag.find_all('span')[2].text.split()
+    if bedrooms_tag[0] == 'Studio':
+        bedrooms_tag[0] = 1
+    bedrooms = int(bedrooms_tag[0])
+
+    return (policy_num.text, place_type[0] + ' Room', bedrooms)
 
 
 def get_detailed_listing_database(html_file):
@@ -91,7 +105,13 @@ def get_detailed_listing_database(html_file):
         ...
     ]
     """
-    pass
+    all_info = []
+    all_listings = get_listings_from_search_results(html_file)
+    for listing in all_listings:
+        listing_info = get_listing_information(listing[-1])
+        new_tup = (listing + listing_info)
+        all_info.append(new_tup)
+    return all_info
 
 
 def write_csv(data, filename):
@@ -176,7 +196,7 @@ class TestCases(unittest.TestCase):
         # check that the last title is correct (open the search results html and find it)
         self.assertEqual(listings[-1], ('Hill Street Home, Sanctuary in Heart of the City', 238, '32871760'))
 
-    '''
+    
     def test_get_listing_information(self):
         html_list = ["1623609",
                      "1944564",
@@ -198,13 +218,13 @@ class TestCases(unittest.TestCase):
             # check that the third element in the tuple is an int
             self.assertEqual(type(listing_information[2]), int)
         # check that the first listing in the html_list has policy number 'STR-0001541'
-
+        self.assertEqual(listing_informations[0][0], 'STR-0001541')
         # check that the last listing in the html_list is a "Private Room"
-
+        self.assertEqual(listing_informations[-1][1], "Private Room")
         # check that the third listing has one bedroom
+        self.assertEqual(listing_informations[2][2], 1)
 
-        pass
-
+    '''
     def test_get_detailed_listing_database(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
         # and save it to a variable
@@ -264,7 +284,7 @@ class TestCases(unittest.TestCase):
 
 if __name__ == '__main__':
     #database = get_detailed_listing_database("html_files/mission_district_search_results.html")
-    print(get_listings_from_search_results("html_files/mission_district_search_results.html"))
+    print(get_detailed_listing_database("html_files/mission_district_search_results.html"))
     #write_csv(database, "airbnb_dataset.csv")
     #check_policy_numbers(database)
-    unittest.main(verbosity=2)
+    #unittest.main(verbosity=2)
